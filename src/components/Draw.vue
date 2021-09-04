@@ -1,18 +1,19 @@
 <template>
   <div>
-    <div style='width: 400px; height: 300px; float: left; border: 1px solid red'>
-      picture goes here...
+    <div style='width: 800px; height: 380px; float: left; border: 1px solid red;
+    background-image: url("./static/bg.jpg")
+      '>
     </div>
-    <div style='float: left; margin-left:20px'>
-      <table>
+    <div style='float: left; margin-left:20px; width: 800px'>
+      <table style='width: 100%'>
         <tr>
-          <td>
+          <td style="width: 100px">
             Item Name
           </td>
-          <td>
+          <td style="width: ">
             Item Value
           </td>
-          <td>
+          <td style="width: 300px">
             Explain
           </td>
         </tr>
@@ -35,7 +36,8 @@
             <input type="text" v-model="show_annotations" />
           </td>
           <td>
-            true/false
+            true: show the annotations(rectangles, text..) <br/>
+            false: hidden
           </td>
         </tr>
         <tr>
@@ -43,8 +45,10 @@
             Box list
           </td>
           <td>
-            <textarea :value="JSON.stringify(box_list)"
-              @input="box_list = JSON.parse($event.target.value)" >
+            <textarea :value="JSON.stringify(box_list, null,4 )"
+              @input="box_list = JSON.parse($event.target.value)"
+                               style='width: 300px; height: 100px'
+              >
             </textarea>
             <hr/>
             {{box_list}}
@@ -52,18 +56,9 @@
           <td>
             Please input a standard json here, <br/>
             good:  {"key": "value"} <br/>
-            bad:  {key: "value"}
-          </td>
-        </tr>
-        <tr>
-          <td>
-            mouse position
-          </td>
-          <td>
-            {{mouse_position}}
-          </td>
-          <td>
-            This changes when your mouse moves over the canvas area
+            bad:  {key: "value"} <br/>
+            If the actual value changed once you change the text, it shows that
+            your input is valid JSON string.
           </td>
         </tr>
         <tr>
@@ -72,7 +67,9 @@
           </td>
           <td>
             <textarea :value="JSON.stringify(canvas_transform)"
-              @input="canvas_transform = JSON.parse($event.target.value)" >
+              @input="canvas_transform = JSON.parse($event.target.value)"
+                               style='width: 300px; height: 40px'
+                               >
             </textarea>
             <hr/>
             {{canvas_transform}}
@@ -89,6 +86,21 @@
             <input type="button" @click="do_refresh" value='Refresh'/>
           </td>
           <td>{{refreshed_at}}</td>
+        </tr>
+        <tr>
+          <td>
+            mouse position
+          </td>
+          <td>
+            {{mouse_position}}
+          </td>
+          <td>
+            This changes when your mouse moves over the canvas area <br/>
+
+            if the mouse position is within the rectangle and/or circles<br/>
+            we drew
+            emit an event 'box_hover', with the current index 'i', x, y
+          </td>
         </tr>
       </table>
     </div>
@@ -115,7 +127,6 @@ import Vue from 'vue'
 export default {
   mounted() {
     console.info("== refresh: ", this.refresh)
-    this.box_list_string = JSON.stringify(this.box_list)
 
   },
 
@@ -131,14 +142,16 @@ export default {
   data(){
     return {
       ord: 0,
-      box_list: [{a:1}, {b:2}],
-      box_list_string: '',
+      box_list: [
+        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"color":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}},
+        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"color":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}}
+        ],
       current_box: {},
       refresh: false,
       mouse_position: {},
       draw_mode: false,
       canvas_transform: { scale: 1},
-      show_annotations: false,
+      show_annotations: true,
       refreshed_at: new Date()
     }
   },
@@ -166,7 +179,7 @@ export default {
       this.draw_circle(circle_size, x, y, ctx)
 
       // TODO grab box_list
-      let boxes = []
+      let boxes = this.box_list
 
       for (var i in boxes) {
 
