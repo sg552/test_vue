@@ -3,6 +3,8 @@
     <div style='width: 800px; height: 380px; float: left; border: 1px solid red;
     background-image: url("./static/bg.jpg")
       '>
+      <canvas id='my_canvas'>
+      </canvas>
     </div>
     <div style='float: left; margin-left:20px; width: 800px'>
       <table style='width: 100%'>
@@ -160,9 +162,21 @@ export default {
     do_refresh(){
       console.info("do a refresh!")
       this.refreshed_at = new Date()
+      let ctx = document.getElementById('my_canvas').getContext('2d')
+      this.draw_circle(10, 35, 55, ctx)
+      alert('refreshed!')
     },
     // TODO complete this function
     draw_circle: function (circle_size, x, y, ctx) {
+
+      ctx.beginPath();
+      ctx.arc(x, y, circle_size, 0, 2*Math.PI);
+      ctx.stroke();
+
+      /*
+      ctx.fillStyle="green"
+      ctx.fill()
+      */
     },
     to_int: function(n){
       return parseInt(n)
