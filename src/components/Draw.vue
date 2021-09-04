@@ -3,7 +3,7 @@
     <div style='width: 800px; height: 380px; float: left; border: 1px solid red;
     background-image: url("./static/bg.jpg")
       '>
-      <canvas id='my_canvas'>
+      <canvas id='my_canvas' style='border: 1px solid red; height: 380px; width: 800px;' height=380 width=800 >
       </canvas>
     </div>
     <div style='float: left; margin-left:20px; width: 800px'>
@@ -40,6 +40,17 @@
           <td>
             true: show the annotations(rectangles, text..) <br/>
             false: hidden
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Fill Opacity (for debug)
+          </td>
+          <td>
+            <input type="text" v-model="fill_opacity" />
+          </td>
+          <td>
+            default: 0.3  ( 0 ~ 1 )
           </td>
         </tr>
         <tr>
@@ -145,8 +156,12 @@ export default {
     return {
       ord: 0,
       box_list: [
-        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"colour":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}},
-        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"colour":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}}
+        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":true ,"label":{"name":"rectangle_1, I am selected","is_visible":true,
+          "colour":{"rgba":{"r":29,"g":131,"b":72}, "hex": "#1D8348"}}},
+        {"x_min":150, "y_min": 150, "x_max": 250, "y_max": 250, "special_condition": true,"soft_delete":false,"selected":false,"label":{"name":"rectangle_2, I am special!","is_visible":true,
+          "colour":{"rgba":{"r":25,"g":155,"b":185}, "hex": "#1D8348"}}},
+        {"x_min":520, "y_min": 230, "x_max": 620, "y_max": 350, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"rectangle_3, I am normal","is_visible":true,
+          "colour":{"rgba":{"r":25,"g":155,"b":185}, "hex": "#1D8348"}}},
         ],
       current_box: {},
       refresh: false,
@@ -154,7 +169,8 @@ export default {
       draw_mode: false,
       canvas_transform: { scale: 1},
       show_annotations: true,
-      refreshed_at: new Date()
+      refreshed_at: new Date(),
+      fill_opacity: 0.3
     }
   },
 
@@ -162,27 +178,58 @@ export default {
     do_refresh(){
       console.info("do a refresh!")
       this.refreshed_at = new Date()
-      let ctx = document.getElementById('my_canvas').getContext('2d')
-//      this.draw_circle(10, 35, 55, ctx)
+      let canvas = document.getElementById('my_canvas')
+      let ctx = canvas.getContext('2d')
+
+      // clear the previous drawing if there is
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.draw(ctx, function(){ alert("done!")} )
     },
-    // TODO complete this function
-    draw_circle: function (circle_size, x, y, ctx) {
-
+    draw_circle(circle_size, x, y, ctx) {
       ctx.beginPath();
       ctx.arc(x, y, circle_size, 0, 2*Math.PI);
-      ctx.strokeStyle="yellow"
       ctx.stroke();
-
-      ctx.fillStyle="green"
       ctx.fill()
+    },
+    draw_rectangle(box, ctx){
+      // TODO draw dashed line if special condition is true else draw solid line
+
+      // by Siwei REFACTOR:
+      // if(box.special_condition == true) {  ... else ... }
+      ctx.setLineDash( box.special_condition ? [6,2] : [])
+
+      let rectangle_x_length = (box.x_max - box.x_min) / this.canvas_transform['scale']
+      let rectangle_y_length = (box.y_max - box.y_min) / this.canvas_transform['scale']
+      // TODO DONE draw rectangle
+      ctx.strokeRect(box.x_min, box.y_min, rectangle_x_length, rectangle_y_length)
+
+      // by Siwei: filling the rectangle with opacity
+      ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, this.fill_opacity)
+      ctx.fillRect(box.x_min, box.y_min, rectangle_x_length, rectangle_y_length)
+      ctx.fill()
+    },
+
+    /* by Siwei: REFACTOR for:
+    let r = box.label.colour.rgba.r
+    let g = box.label.colour.rgba.g
+    let b = box.label.colour.rgba.b
+    if (box.selected) {
+      ctx.fillStyle = "blue";
+    } else {
+      ctx.fillStyle = "rgba(" + r + "," + g + "," + b + ", 0.1)";
+    }
+    */
+    get_fill_style(rgba, opacity){
+      let result = "rgba(" + rgba.r + "," + rgba.g + "," + rgba.b + ", " + opacity + ")";
+      console.info("== rgba result: ", result)
+      return result
     },
     toInt: function(n){
       return parseInt(n)
     },
     draw: function (ctx, done) {
       /*
-      REFACTOR:
+      by Siwei: REFACTOR:
       if(this.show_annotations == true) { ...
       */
       if (!this.show_annotations){
@@ -192,14 +239,19 @@ export default {
       let circle_size = 8 / this.canvas_transform['scale']
       let font_size = 20 / this.canvas_transform['scale']
       ctx.font = font_size + "px Verdana";
+      ctx.beginPath()
+      ctx.lineWidth = '2'
+      // by Siwei: save the ctx
+      ctx.save()
 
       let boxes = this.box_list
 
       for (var i in boxes) {
-
+        // restore the context from the previous loop
+        ctx.restore()
         let box = boxes[i]
 
-        // REFACTOR:
+        // by Siwei: REFACTOR:
         /*
         if (box.soft_delete != true) {
           if (box.label.is_visible == null || box.label.is_visible == true) {
@@ -209,43 +261,20 @@ export default {
           continue
         }
 
-        ctx.beginPath()
-        ctx.lineWidth = '2'
-        this.draw_circle(circle_size, box.x_min, box.y_min, ctx)
-
-        let r = box.label.colour.rgba.r
-        let g = box.label.colour.rgba.g
-        let b = box.label.colour.rgba.b
-
-        if (box.selected) {
-          ctx.fillStyle = "blue";
-        } else {
-          ctx.fillStyle = "rgba(" + r + "," + g + "," + b + ", 1)";
-        }
-
         ctx.textAlign = "start";
+        // TODO OK handle if label is undefined
+        // by Siwei: opacity is 1 for TEXT
+        ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, 1)
+        ctx.fillText((box.label.name || "need to define text here"), this.toInt(box.x_min), this.toInt(box.y_min));
 
-        // TODO handle if label is undefined
-        ctx.fillText(box.label.name, this.toInt(box.x_min), this.toInt(box.y_min));
+        // by Siwei: opacity changed for the following fill operation
+        ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, this.fill_opacity)
+        ctx.strokeStyle = box.selected ? "blue" : this.get_fill_style(box.label.colour.rgba, 1)
 
-        // TODO draw circles (using eariler created function) at box.[x/y]_min and box.[x/y]_max
-        this.draw_circle(circle_size, box.x_max, box.y_max, ctx)
-
-        // TODO draw dashed line if special condition is true else draw solid line
-
-        if (box.special_condition == true) {
-
-        } else {
-
-        }
-
-        ctx.fill()
-
-        ctx.fillStyle = '' // TODO RGBA fill style
-
-        // TODO draw rectangle
-
-        ctx.fill()
+        // by Siwei: create 2 circles and 1 rectangle
+        this.draw_circle(circle_size, box.x_min / this.canvas_transform['scale'], box.y_min, ctx)
+        this.draw_circle(circle_size, box.x_max / this.canvas_transform['scale'], box.y_max, ctx)
+        this.draw_rectangle(box, ctx)
 
         ctx.closePath()
 
@@ -258,15 +287,6 @@ export default {
              * */
           }
         }
-
-
-        if (box.selected == true) {
-          ctx.strokeStyle = "blue"
-        } else {
-          ctx.strokeStyle = box.label.colour.hex
-        }
-        ctx.stroke()
-
 
       }
       done();
