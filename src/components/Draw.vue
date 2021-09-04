@@ -1,13 +1,14 @@
 <template>
   <div>
-    <div style='width: 800px; height: 380px; float: left; border: 1px solid red;
+    <div style='width: 800px; height: 580px; float: left; border: 1px solid red;
     background-image: url("./static/bg.jpg")
       '>
-      <canvas id='my_canvas' style='border: 1px solid red; height: 380px; width: 800px;' height=380 width=800 >
+      <canvas id='my_canvas' style='border: 1px solid red; height: 580px; width: 800px;' height=580 width=800 >
       </canvas>
     </div>
+
     <div style='float: left; margin-left:20px; width: 800px'>
-      <table style='width: 100%'>
+      <table style='width: 100%' class='table table-hover table-striped table-bordered'>
         <tr>
           <td style="width: 100px">
             Item Name
@@ -24,7 +25,8 @@
             Draw Mode
           </td>
           <td>
-            <input type="text" v-model="draw_mode" />
+            <input type="radio" :value="true" v-model="draw_mode"> True
+            <input type="radio" :value="false" v-model="draw_mode"> False
           </td>
           <td>
             true/false
@@ -35,7 +37,8 @@
             Show Annotations
           </td>
           <td>
-            <input type="text" v-model="show_annotations" />
+            <input type="radio" :value="true" v-model="show_annotations"> True
+            <input type="radio" :value="false" v-model="show_annotations"> False
           </td>
           <td>
             true: show the annotations(rectangles, text..) <br/>
@@ -60,11 +63,9 @@
           <td>
             <textarea :value="JSON.stringify(box_list, null,4 )"
               @input="box_list = JSON.parse($event.target.value)"
-                               style='width: 300px; height: 100px'
+                               style='width: 100%; height: 200px'
               >
             </textarea>
-            <hr/>
-            {{box_list}}
           </td>
           <td>
             Please input a standard json here, <br/>
@@ -81,7 +82,7 @@
           <td>
             <textarea :value="JSON.stringify(canvas_transform)"
               @input="canvas_transform = JSON.parse($event.target.value)"
-                               style='width: 300px; height: 40px'
+                               style='width: 100%; height: 40px'
                                >
             </textarea>
             <hr/>
@@ -105,7 +106,8 @@
             mouse position
           </td>
           <td>
-            {{mouse_position}}
+            x: {{mouse_position.x}}
+            y: {{mouse_position.x}}
           </td>
           <td>
             This changes when your mouse moves over the canvas area <br/>
@@ -134,6 +136,28 @@
  *
  * Bonus points - mock up input data and construct a test case.
  *
+
+  Siwei's Answer:
+
+1. Normally, we have to calculate the mouse's x and y position comparing to the rectangle/circles' position
+and then determin the content of event to trigger. But it's not easy and eligent to do this.
+
+-  https://stackoverflow.com/questions/9880279/how-do-i-add-a-simple-onclick-event-handler-to-a-canvas-element
+
+so I switched to Path2D to create elements that attach event listener, refer to:
+
+-  https://developer.mozilla.org/zh-CN/docs/Web/API/Path2D/Path2D
+
+Path2D has two methods: isPointInPath() and isPointInStroke() , which can determine if the mouse
+in the path of the canvas elements.
+
+maybe using the SVG in this case is eaiser to be processed.
+
+2. I used a webpack project ( created by vue-cli) to implement this question.
+
+3. I am not very familiar with the context of this question, if there is an explaination video
+, or a demonstration out there, it would be more clear for the candidates.
+
 */
 
 import Vue from 'vue'
@@ -156,21 +180,32 @@ export default {
     return {
       ord: 0,
       box_list: [
-        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":true ,"label":{"name":"rectangle_1, I am selected","is_visible":true,
+        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,
+          "soft_delete":false,"selected":true ,"label":{"name":"rectangle_1, I am selected","is_visible":true,
           "colour":{"rgba":{"r":29,"g":131,"b":72}, "hex": "#1D8348"}}},
-        {"x_min":150, "y_min": 150, "x_max": 250, "y_max": 250, "special_condition": true,"soft_delete":false,"selected":false,"label":{"name":"rectangle_2, I am special!","is_visible":true,
+        {"x_min":150, "y_min": 150, "x_max": 250, "y_max": 250, "special_condition": true,
+          "soft_delete":false,"selected":false,"label":{"name":"rectangle_2, I am special!","is_visible":true,
           "colour":{"rgba":{"r":25,"g":155,"b":185}, "hex": "#1D8348"}}},
-        {"x_min":520, "y_min": 230, "x_max": 620, "y_max": 350, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"rectangle_3, I am normal","is_visible":true,
+        {"x_min":520, "y_min": 230, "x_max": 620, "y_max": 350, "special_condition": false,
+          "soft_delete":false,"selected":false,"label":{"name":"rectangle_3, I am normal","is_visible":true,
+          "colour":{"rgba":{"r":25,"g":155,"b":185}, "hex": "#1D8348"}}},
+        {"x_min":420, "y_min": 130, "x_max": 480, "y_max": 250, "special_condition": false,
+          "soft_delete":true,"selected":false,"label":{"name":"rectangle_4, I am soft deleted but visible!","is_visible":true,
+          "colour":{"rgba":{"r":25,"g":155,"b":185}, "hex": "#1D8348"}}},
+        {"x_min":420, "y_min": 130, "x_max": 480, "y_max": 250, "special_condition": false,
+          "soft_delete":true,"selected":false,"label":{"name":"rectangle_5, I am soft deleted and NOT visible!","is_visible":false,
           "colour":{"rgba":{"r":25,"g":155,"b":185}, "hex": "#1D8348"}}},
         ],
       current_box: {},
+      elements_on_canvas: {},
       refresh: false,
       mouse_position: {},
-      draw_mode: false,
+      draw_mode: true,
       canvas_transform: { scale: 1},
       show_annotations: true,
       refreshed_at: new Date(),
-      fill_opacity: 0.3
+      fill_opacity: 0.3,
+      box_hover_text: ''
     }
   },
 
@@ -183,15 +218,80 @@ export default {
 
       // clear the previous drawing if there is
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      this.draw(ctx, function(){ alert("done!")} )
+
+      this.draw(ctx, function(){
+        alert("done!")
+      })
+      console.info(this.elements_on_canvas)
     },
-    draw_circle(circle_size, x, y, ctx) {
+
+    /* TODO DONE
+     * if the mouse position is within the rectangle and/or circles we drew
+     * emit an event 'box_hover', with the current index 'i',
+     * this.mouse_position.raw.x and this.mouse_position.raw.y
+     * */
+    bind_box_hover(ctx, box){
+      let canvas = ctx.canvas
+      let that = this
+      canvas.addEventListener('mousemove',function(event){
+        /*
+        by Siwei:  now let's check all the elements one by one and give back the index
+        this.elements_on_canvas:
+        0: Array(3) [ Path2D(circle), Path2D(circle), Path2D(rectangle) ]
+        1: Array(3) [ Path2D(circle), Path2D(circle), Path2D(rectangle) ]
+        2: Array(3) [ Path2D(circle), Path2D(circle), Path2D(rectangle) ]
+        */
+        let keys = Object.keys(that.elements_on_canvas)
+        for(let i = 0 ; i < keys.length; i ++){
+          // loop the level 2 array:  circle, circle, rectangle
+          let index = keys[i]
+          let two_circle_and_one_rectangle = that.elements_on_canvas[i]
+          for(let j = 0; j < two_circle_and_one_rectangle.length; j++) {
+            let element = two_circle_and_one_rectangle[j]
+            if(!that.draw_mode && ctx.isPointInPath(element, event.offsetX, event.offsetY)){
+              console.info("emit event! index: ", i, event.offsetX, event.offsetX)
+              that.mouse_position = { x: event.offsetX, y: event.offsetY }
+              that.current_box = that.box_list[i]
+              that.$emit('box_hover', event, index, event.offsetX, event.offsetY)
+            }
+          }
+        }
+      })
+
+    },
+    draw_text(box, ctx){
+
+      ctx.textAlign = "start";
+      // TODO OK handle if label is undefined
+      // by Siwei: opacity is 1 for TEXT
+      ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, 1)
+      let x = box.x_min / this.canvas_transform['scale']
+      let y = box.y_min / this.canvas_transform['scale']
+      ctx.fillText((box.label.name || "need to define text here"), this.toInt(x), this.toInt(y));
+
+      // by Siwei: opacity changed for the following fill operation
+      ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, this.fill_opacity)
+
+    },
+    draw_circle(x, y, ctx, i) {
       ctx.beginPath();
-      ctx.arc(x, y, circle_size, 0, 2*Math.PI);
-      ctx.stroke();
-      ctx.fill()
+      let circle_size = 8 / this.canvas_transform['scale']
+      x = x / this.canvas_transform['scale']
+      y = y / this.canvas_transform['scale']
+//      ctx.arc(x, y, circle_size, 0, 2*Math.PI);
+      let element = new Path2D()
+      element.arc(x, y, circle_size, 0, 2*Math.PI);
+
+      ctx.stroke(element)
+      ctx.fill(element)
+
+      // push this element so that we can bind event to it
+      if(this.elements_on_canvas[i] == undefined) {
+        this.elements_on_canvas[i] = []
+      }
+      this.elements_on_canvas[i].push(element)
     },
-    draw_rectangle(box, ctx){
+    draw_rectangle(box, ctx, i){
       // TODO draw dashed line if special condition is true else draw solid line
 
       // by Siwei REFACTOR:
@@ -200,13 +300,24 @@ export default {
 
       let rectangle_x_length = (box.x_max - box.x_min) / this.canvas_transform['scale']
       let rectangle_y_length = (box.y_max - box.y_min) / this.canvas_transform['scale']
+      let x = box.x_min / this.canvas_transform['scale']
+      let y = box.y_min / this.canvas_transform['scale']
       // TODO DONE draw rectangle
-      ctx.strokeRect(box.x_min, box.y_min, rectangle_x_length, rectangle_y_length)
+//      ctx.strokeRect(x, y, rectangle_x_length, rectangle_y_length)
+      let element = new Path2D()
+      element.rect(x, y, rectangle_x_length, rectangle_y_length)
 
       // by Siwei: filling the rectangle with opacity
       ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, this.fill_opacity)
-      ctx.fillRect(box.x_min, box.y_min, rectangle_x_length, rectangle_y_length)
-      ctx.fill()
+      ctx.fillRect(x, y, rectangle_x_length, rectangle_y_length)
+
+      ctx.fill(element)
+      ctx.stroke(element)
+      // restore the line
+      ctx.setLineDash([])
+
+      // push this element so that we can bind event to it
+      this.elements_on_canvas[i].push(element)
     },
 
     /* by Siwei: REFACTOR for:
@@ -236,7 +347,6 @@ export default {
         return
       }
 
-      let circle_size = 8 / this.canvas_transform['scale']
       let font_size = 20 / this.canvas_transform['scale']
       ctx.font = font_size + "px Verdana";
       ctx.beginPath()
@@ -261,32 +371,16 @@ export default {
           continue
         }
 
-        ctx.textAlign = "start";
-        // TODO OK handle if label is undefined
-        // by Siwei: opacity is 1 for TEXT
-        ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, 1)
-        ctx.fillText((box.label.name || "need to define text here"), this.toInt(box.x_min), this.toInt(box.y_min));
-
-        // by Siwei: opacity changed for the following fill operation
-        ctx.fillStyle = this.get_fill_style(box.label.colour.rgba, this.fill_opacity)
+        // by Siwei: create 1 text, 2 circles and 1 rectangle
+        this.draw_text(box,ctx)
         ctx.strokeStyle = box.selected ? "blue" : this.get_fill_style(box.label.colour.rgba, 1)
-
-        // by Siwei: create 2 circles and 1 rectangle
-        this.draw_circle(circle_size, box.x_min / this.canvas_transform['scale'], box.y_min, ctx)
-        this.draw_circle(circle_size, box.x_max / this.canvas_transform['scale'], box.y_max, ctx)
-        this.draw_rectangle(box, ctx)
+        this.draw_circle(box.x_min, box.y_min, ctx, i)
+        this.draw_circle(box.x_max, box.y_max, ctx, i)
+        this.draw_rectangle(box, ctx, i)
 
         ctx.closePath()
-
-        if (!this.draw_mode) {
-          if (true) {
-            /* TODO
-             * if the mouse position is within the rectangle and/or circles we drew
-             * emit an event 'box_hover', with the current index 'i',
-             * this.mouse_position.raw.x and this.mouse_position.raw.y
-             * */
-          }
-        }
+        // bind the event
+        this.bind_box_hover(ctx, box)
 
       }
       done();
