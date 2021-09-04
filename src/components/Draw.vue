@@ -145,8 +145,8 @@ export default {
     return {
       ord: 0,
       box_list: [
-        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"color":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}},
-        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"color":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}}
+        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"colour":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}},
+        {"x_min":50, "y_min": 50, "x_max": 100, "y_max": 200, "special_condition": false,"soft_delete":false,"selected":false,"label":{"name":"test","is_visible":true,"colour":{"rgba":{"r":255,"g":255,"b":255}, "hex": "0XFFFF"}}}
         ],
       current_box: {},
       refresh: false,
@@ -163,25 +163,28 @@ export default {
       console.info("do a refresh!")
       this.refreshed_at = new Date()
       let ctx = document.getElementById('my_canvas').getContext('2d')
-      this.draw_circle(10, 35, 55, ctx)
-      alert('refreshed!')
+//      this.draw_circle(10, 35, 55, ctx)
+      this.draw(ctx, function(){ alert("done!")} )
     },
     // TODO complete this function
     draw_circle: function (circle_size, x, y, ctx) {
 
       ctx.beginPath();
       ctx.arc(x, y, circle_size, 0, 2*Math.PI);
+      ctx.strokeStyle="yellow"
       ctx.stroke();
 
-      /*
       ctx.fillStyle="green"
       ctx.fill()
-      */
     },
-    to_int: function(n){
+    toInt: function(n){
       return parseInt(n)
     },
     draw: function (ctx, done) {
+      /*
+      REFACTOR:
+      if(this.show_annotations == true) { ...
+      */
       if (!this.show_annotations){
         return
       }
@@ -190,79 +193,80 @@ export default {
       let font_size = 20 / this.canvas_transform['scale']
       ctx.font = font_size + "px Verdana";
 
-      this.draw_circle(circle_size, x, y, ctx)
-
-      // TODO grab box_list
       let boxes = this.box_list
 
       for (var i in boxes) {
 
         let box = boxes[i]
 
+        // REFACTOR:
+        /*
         if (box.soft_delete != true) {
           if (box.label.is_visible == null || box.label.is_visible == true) {
+          ...
+        */
+        if (box.soft_delete || !box.label.is_visible) {
+          continue
+        }
 
-            ctx.beginPath()
-            ctx.lineWidth = '2'
+        ctx.beginPath()
+        ctx.lineWidth = '2'
+        this.draw_circle(circle_size, box.x_min, box.y_min, ctx)
 
-            let r = box.label.colour.rgba.r
-            // TODO get other colours
+        let r = box.label.colour.rgba.r
+        let g = box.label.colour.rgba.g
+        let b = box.label.colour.rgba.b
 
+        if (box.selected) {
+          ctx.fillStyle = "blue";
+        } else {
+          ctx.fillStyle = "rgba(" + r + "," + g + "," + b + ", 1)";
+        }
 
-            if (box.selected == true) {
-              ctx.fillStyle = "blue";
-            } else {
-              ctx.fillStyle = "rgba(" + r + "," + g + "," + b + ", 1)";
-            }
+        ctx.textAlign = "start";
 
-            ctx.textAlign = "start";
+        // TODO handle if label is undefined
+        ctx.fillText(box.label.name, this.toInt(box.x_min), this.toInt(box.y_min));
 
-            // TODO handle if label is undefined
-            ctx.fillText(box.label.name, this.toInt(box.x_min), this.toInt(box.y_min));
+        // TODO draw circles (using eariler created function) at box.[x/y]_min and box.[x/y]_max
+        this.draw_circle(circle_size, box.x_max, box.y_max, ctx)
 
-            // TODO draw circles (using eariler created function) at box.[x/y]_min and box.[x/y]_max
+        // TODO draw dashed line if special condition is true else draw solid line
 
-            ////
+        if (box.special_condition == true) {
 
+        } else {
 
+        }
 
-            // TODO draw dashed line if special condition is true else draw solid line
+        ctx.fill()
 
-            if (box.special_condition == true) {
+        ctx.fillStyle = '' // TODO RGBA fill style
 
-            } else {
+        // TODO draw rectangle
 
-            }
+        ctx.fill()
 
-            ctx.fill()
+        ctx.closePath()
 
-            ctx.fillStyle = '' // TODO RGBA fill style
-
-            // TODO draw rectangle
-
-            ctx.fill()
-
-            ctx.closePath()
-
-            if (!this.draw_mode) {
-              if (true) {
-                /* TODO
-                 * if the mouse position is within the rectangle and/or circles we drew
-                 * emit an event 'box_hover', with the current index 'i',
-                 * this.mouse_position.raw.x and this.mouse_position.raw.y
-                 * */
-              }
-            }
-
-
-            if (box.selected == true) {
-              ctx.strokeStyle = "blue"
-            } else {
-              ctx.strokeStyle = box.label.colour.hex
-            }
-            ctx.stroke()
+        if (!this.draw_mode) {
+          if (true) {
+            /* TODO
+             * if the mouse position is within the rectangle and/or circles we drew
+             * emit an event 'box_hover', with the current index 'i',
+             * this.mouse_position.raw.x and this.mouse_position.raw.y
+             * */
           }
         }
+
+
+        if (box.selected == true) {
+          ctx.strokeStyle = "blue"
+        } else {
+          ctx.strokeStyle = box.label.colour.hex
+        }
+        ctx.stroke()
+
 
       }
       done();
